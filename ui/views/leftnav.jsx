@@ -7,7 +7,7 @@ import u from '../lib/util'
 
 class NavLink extends React.Component {
   render() {
-    var selected = (this.props.to === this.props.location)
+    var selected = (this.props.to === this.props.currentView)
     let content = this.props.children
     if (!content)
       content = <span><i className={'fa fa-'+this.props.icon} /> {this.props.label} {this.props.count ? ' ('+this.props.count+')' : ''}</span>
@@ -41,20 +41,20 @@ class LeftNav extends React.Component {
   }
   render() {
     let renderProfLink = (id, name, icon) => {
-      return <NavLink key={id} to={'/profile/'+encodeURIComponent(id)} location={this.props.location}>
+      return <NavLink key={'profile:'+id} to={'/profile/'+encodeURIComponent(id)} currentView={this.props.currentView}>
         <i className={'fa fa-'+icon} /> {typeof name == 'string' ? name : this.nameOf(id)}
       </NavLink>
     }
 
     return <div id="leftnav" style={{height: this.props.height}}>
       <div className="leftnav-item label">Messages</div>
-      <NavLink to="/" location={this.props.location} icon="newspaper-o" label="Feed" />
-      <NavLink to="/inbox" location={this.props.location} icon="inbox" label="Inbox" count={this.state.indexCounts.inboxUnread} />
-      <NavLink to="/bookmarks" location={this.props.location} icon="bookmark-o" label="Saved" count={this.state.indexCounts.bookmarksUnread} />
+      <NavLink to="newsfeed" currentView={this.props.currentView} icon="newspaper-o" label="Feed" />
+      <NavLink to="inbox" currentView={this.props.currentView} icon="inbox" label="Inbox" count={this.state.indexCounts.inboxUnread} />
+      <NavLink to="bookmarks" currentView={this.props.currentView} icon="bookmark-o" label="Saved" count={this.state.indexCounts.bookmarksUnread} />
 
       <div className="leftnav-item label">People</div>
       {renderProfLink(this.props.userid, 'Your Profile', 'user')}
-      <NavLink to="/people" location={this.props.location} icon="at" label="Contacts" />
+      <NavLink to="people" currentView={this.props.currentView} icon="at" label="Contacts" />
       <Issues />
     </div>
   }

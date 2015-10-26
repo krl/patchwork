@@ -72,7 +72,7 @@ export default class Summary extends React.Component {
     // is the card oversized?
     if (!this.refs.body)
       return
-    let el = this.refs.body.getDOMNode()
+    let el = this.refs.body
     if (el.getClientRects()[0].height > MAX_CONTENT_HEIGHT) {
       this.setState({ isOversized: true })
     }

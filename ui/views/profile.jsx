@@ -1,7 +1,7 @@
 'use babel'
 import React from 'react'
 import MsgList from '../com/msg-list'
-import Card from '../com/msg-list/card'
+import Card from '../com/msg-list-item/card'
 import { VerticalFilledContainer } from '../com/index'
 import UserInfo from '../com/user-info'
 import app from '../lib/app'
