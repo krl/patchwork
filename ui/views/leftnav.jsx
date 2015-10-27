@@ -31,7 +31,7 @@ class LeftNav extends React.Component {
     const NavLink = ({ viewId, icon, title, count }) => {
       var selected = (viewId === this.props.currentView)
       return <div className={'leftnav-item '+(selected?'selected':'')}>
-        <a onClick={()=>this.props.onOpenView(viewId)}><i className={'fa fa-'+icon} /> {title||viewId} {count ? ' ('+count+')' : ''}</a>
+        <a onClick={()=>this.props.onOpenView(viewId)}><i className={'fa fa-'+(icon||'file-o')} /> {title||viewId} {count ? ' ('+count+')' : ''}</a>
       </div>
     }
     // helper component to render profile nav links
