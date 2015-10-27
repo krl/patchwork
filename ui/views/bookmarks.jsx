@@ -1,7 +1,7 @@
 'use babel'
 import React from 'react'
 import { connect } from 'react-redux'
-import { viewOpen, viewUpdateSetting } from '../actions/views'
+import { viewOpen, viewOpenMsg, viewUpdateSetting } from '../actions/views'
 import { msglistCreate, msglistLoadMore, msgListSetFilter } from '../actions/msgs'
 import SimpleInfinite from '../com/simple-infinite'
 import FAB from '../com/fab'

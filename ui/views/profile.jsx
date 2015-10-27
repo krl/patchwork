@@ -1,7 +1,7 @@
 'use babel'
 import React from 'react'
 import { connect } from 'react-redux'
-import { viewOpen, viewUpdateSetting } from '../actions/views'
+import { viewOpen, viewOpenMsg, viewClose, viewUpdateSetting } from '../actions/views'
 import { msglistCreate, msglistLoadMore, msgListSetFilter } from '../actions/msgs'
 import SimpleInfinite from '../com/simple-infinite'
 import FAB from '../com/fab'
@@ -57,7 +57,7 @@ class Profile extends React.Component {
       <SimpleInfinite onInfiniteLoad={this.onInfiniteLoad.bind(this)} infiniteLoadBeginBottomOffset={shouldLoadMore ? 100 : 0}>
         <UserInfo pid={this.props.pid} />
         <div className="toolbar">
-          <a className="btn"><i className="fa fa-search" /></a>
+          <a className="btn" onClick={()=>this.props.onCloseView(this.props.param)} title="Close"><i className="fa fa-close" /> Close</a>
           <Tabs options={FILTERS} selected={this.props.activeFilter} onSelect={this.onSelectFilter.bind(this)} />
         </div>
         <MsgList
@@ -75,10 +75,10 @@ class Profile extends React.Component {
   }
 }
 
-function mapStateToProps (state) {
-  const viewId = state.currentView
-  const view = state.views[viewId]
-  const msgList = state.msgLists[viewId]
+function mapStateToProps (state, props) {
+  const pid = props.param
+  const view = state.views['Profile:'+pid]
+  const msgList = state.msgLists['Profile:'+pid]
   const settings = view.settings
   return {
     pid: view.param,
@@ -100,8 +100,9 @@ function mapDispatchToProps (dispatch) {
       cursorFn: (msg) => msg.value.sequence,
       numInitialLoad: PAGE_SIZE
     })),
+    onCloseView: (pid) => dispatch(viewClose('Profile:'+pid)),
     onLoadMore: (pid) => dispatch(msglistLoadMore('Profile:'+pid, PAGE_SIZE)),
-    onOpenMsg: (msgId) => dispatch(viewOpen('Msg:'+msgId)),
+    onOpenMsg: (msgId) => dispatch(viewOpenMsg(msgId)),
     onOpenComposer: () => dispatch(viewOpen('Composer')),
     onSelectFilter: (pid, filter) => dispatch(viewUpdateSetting('Profile:'+pid, 'activeFilter', filter))
   }

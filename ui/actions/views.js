@@ -32,3 +32,6 @@ export function viewUpdateSettings (viewId, KVs) {
 export function viewOpenMsg (msgId) {
   return viewOpen('Msg:'+msgId, { title: 'Message', icon: 'envelope' })
 }
+export function viewOpenProfile (userId) {
+  return viewOpen('Profile:'+userId, { title: 'User', icon: 'user' })
+}

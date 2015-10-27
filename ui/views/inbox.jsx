@@ -1,7 +1,7 @@
 'use babel'
 import React from 'react'
 import { connect } from 'react-redux'
-import { viewOpen, viewUpdateSetting } from '../actions/views'
+import { viewOpen, viewOpenMsg, viewUpdateSetting } from '../actions/views'
 import { msglistCreate, msglistLoadMore, msgListSetFilter } from '../actions/msgs'
 import SimpleInfinite from '../com/simple-infinite'
 import FAB from '../com/fab'
@@ -87,7 +87,7 @@ function mapDispatchToProps (dispatch) {
       numInitialLoad: PAGE_SIZE
     })),
     onLoadMore: () => dispatch(msglistLoadMore('Inbox', PAGE_SIZE)),
-    onOpenMsg: (msgId) => dispatch(viewOpen('Msg:'+msgId)),
+    onOpenMsg: (msgId) => dispatch(viewOpenMsg(msgId)),
     onOpenComposer: () => dispatch(viewOpen('Composer')),
     onSelectFilter: (filter) => dispatch(viewUpdateSetting('Inbox', 'activeFilter', filter))
   }
