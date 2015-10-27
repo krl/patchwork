@@ -45,7 +45,7 @@ class Inbox extends React.Component {
   render() {
     const list = this.props.list
     const shouldLoadMore = list && !list.isFetching && (!list.isAtEnd || this.state.listLength < list.msgs.length)
-    return <div id="feed">
+    return <div id="inbox">
       <FAB label="Compose" icon="pencil" onClick={this.props.onOpenComposer} />
       <SimpleInfinite onInfiniteLoad={this.onInfiniteLoad.bind(this)} infiniteLoadBeginBottomOffset={shouldLoadMore ? 100 : 0}>
         <div className="toolbar">
@@ -60,7 +60,7 @@ class Inbox extends React.Component {
           limit={this.state.listLength}
           onNeedsMore={this.props.onLoadMore}
           isLoading={this.props.isLoading}
-          emptyMsg="Your feed is empty" />
+          emptyMsg="Your inbox is empty" />
       </SimpleInfinite>
     </div>
   }
