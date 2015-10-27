@@ -1,45 +1,107 @@
 'use babel'
 import React from 'react'
+import { connect } from 'react-redux'
+import { viewOpen, viewUpdateSetting } from '../actions/views'
+import { msglistCreate, msglistLoadMore, msgListSetFilter } from '../actions/msgs'
+import SimpleInfinite from '../com/simple-infinite'
+import FAB from '../com/fab'
+import UserInfo from '../com/user-info'
+import Tabs from '../com/tabs'
 import MsgList from '../com/msg-list'
 import Card from '../com/msg-list-item/card'
-import { VerticalFilledContainer } from '../com/index'
-import UserInfo from '../com/user-info'
 import app from '../lib/app'
+import social from '../lib/social-graph'
 
-export default class Profile extends React.Component {
+const PAGE_SIZE = 25 // how many msgs do we load at once, and want to try to get on the page?
+const FILTERS = [
+  { label: 'About', fn: msg => true }, // TODO
+  { label: 'Posts', fn: msg => true }, // TODO
+  { label: 'To You', fn: msg => true } // TODO
+]
+
+class Profile extends React.Component {
   constructor(props) {
     super(props)
-    this.state = { pid: decodeURIComponent(this.props.params.id) }
+    this.state = {
+      listLength: PAGE_SIZE // # the list should be showing right now
+    }
   }
 
-  componentWillReceiveProps(newProps) {
-    this.setState({ pid: decodeURIComponent(newProps.params.id) })
+  componentDidMount() {
+    this.props.onLoad(this.props.pid)
+  }
+
+  onSelectFilter(filter) {
+    // reset the list size
+    this.setState({ listLength: PAGE_SIZE })
+    // bubble up
+    this.props.onSelectFilter(this.props.pid, filter)
+  }
+
+  onInfiniteLoad() {
+    // increase the list size
+    this.setState({ listLength: this.state.listLength + PAGE_SIZE })
   }
 
   render() {
-    let feed = (opts) => {
-      opts = opts || {}
-      opts.id = this.state.pid
-      return app.ssb.createUserStream(opts)
-    }
-    let cursor = (msg) => {
-      if (msg)
-        return msg.value.sequence
-    }
-    let filter = (msg) => {
+    const list = this.props.list
+    const shouldLoadMore = list && !list.isFetching && (!list.isAtEnd || this.state.listLength < list.msgs.length)
+    const filterFn = (msg) => {
       // toplevel post by this user
       var c = msg.value.content
-      if (msg.value.author == this.state.pid && c.type == 'post' && !(c.root || c.branch))
+      if (msg.value.author == this.props.pid && c.type == 'post' && !(c.root || c.branch) && this.props.activeFilter.fn(msg))
         return true
     }
-    let hero = () => {
-      return <UserInfo key={this.state.pid} pid={this.state.pid} />
-    }
-    // MsgList must have refreshOnReply
-    // - Why: in other views, such as the inbox view, a reply will trigger a new message to be emitted in the livestream
-    // - that's not the case for `createUserStream`, so we need to manually refresh a thread on reply
-    return <div id="profile" key={this.state.pid}>
-      <MsgList threads ListItem={Card} filters={[{label:'About'},{label:'Posts'},{label:'To You'}]} source={feed} cursor={cursor} filter={filter} hero={hero} refreshOnReply />
+    return <div id="profile">
+      <FAB label="Compose" icon="pencil" onClick={this.props.onOpenComposer} />
+      <SimpleInfinite onInfiniteLoad={this.onInfiniteLoad.bind(this)} infiniteLoadBeginBottomOffset={shouldLoadMore ? 100 : 0}>
+        <UserInfo pid={this.props.pid} />
+        <div className="toolbar">
+          <a className="btn"><i className="fa fa-search" /></a>
+          <Tabs options={FILTERS} selected={this.props.activeFilter} onSelect={this.onSelectFilter.bind(this)} />
+        </div>
+        <MsgList
+          ListItem={Card}
+          list={this.props.list}
+          msgsById={this.props.msgsById}
+          filterFn={filterFn}
+          limit={this.state.listLength}
+          onNeedsMore={this.props.onLoadMore.bind(null, this.props.pid)}
+          isLoading={this.props.isLoading}
+          emptyMsg="This feed is empty" />
+      </SimpleInfinite>
     </div>
   }
 }
+
+function mapStateToProps (state) {
+  const viewId = state.currentView
+  const view = state.views[viewId]
+  const msgList = state.msgLists[viewId]
+  const settings = view.settings
+  return {
+    pid: view.param,
+    settings: settings,
+    activeFilter: settings.activeFilter || FILTERS[0],
+    msgsById: state.msgsById,
+    list: (msgList) ? msgList.msgs : [],
+    isLoading: (msgList) ? msgList.isLoading : true
+  }
+}
+function mapDispatchToProps (dispatch) {
+  return {
+    onLoad: (pid) => dispatch(msglistCreate('Profile:'+pid, {
+      fetchFn: (opts) => {
+        opts = opts || {}
+        opts.id = pid
+        return app.ssb.createUserStream(opts)
+      },
+      cursorFn: (msg) => msg.value.sequence,
+      numInitialLoad: PAGE_SIZE
+    })),
+    onLoadMore: (pid) => dispatch(msglistLoadMore('Profile:'+pid, PAGE_SIZE)),
+    onOpenComposer: () => dispatch(viewOpen('composer')),
+    onSelectFilter: (pid, filter) => dispatch(viewUpdateSetting('Profile:'+pid, 'activeFilter', filter))
+  }
+}
+export default connect(mapStateToProps, mapDispatchToProps)(Profile)

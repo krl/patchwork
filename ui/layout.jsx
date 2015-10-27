@@ -36,7 +36,8 @@ class Layout extends React.Component {
     }
   }
   render() {
-    const CurrentView = Views[this.props.currentView] || NotFoundView
+    const currentViewObj = this.props.views[this.props.currentView]
+    const CurrentViewCom = Views[(currentViewObj) ? currentViewObj.iface : ''] || NotFoundView
     return <div className="layout-rows">
       <SetupModal isOpen={this.state.setupIsOpen} cantClose={this.state.setupCantClose} />
       <div className="layout-columns">
@@ -49,7 +50,7 @@ class Layout extends React.Component {
           friends={this.state.user.friends}
           following={this.state.user.nonfriendFolloweds}
           followers={this.state.user.nonfriendFollowers} />
-        <div id="mainview"><CurrentView /></div>
+        <div id="mainview"><CurrentViewCom /></div>
       </div>
     </div>
   }

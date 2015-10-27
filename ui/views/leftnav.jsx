@@ -36,7 +36,7 @@ class LeftNav extends React.Component {
     }
     // helper component to render profile nav links
     const ProfLink = ({ id, label, icon }) => {
-      return <NavLink to={'Profile:'+encodeURIComponent(id)} icon={icon} label={typeof label == 'string' ? label : this.nameOf(id)} />
+      return <NavLink to={'Profile:'+id} icon={icon} label={typeof label == 'string' ? label : this.nameOf(id)} />
     }
 
     return <div id="leftnav" style={{height: this.props.height}}>
