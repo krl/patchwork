@@ -46,7 +46,7 @@ export default class MsgList extends React.Component {
     this.setState({ list: list })
 
     // fire the needs-more CB if that's too few
-    if (props.minimumCount && list.length < props.minimumCount)
+    if (props.limit && list.length < props.limit)
       props.onNeedsMore()
   }
 
@@ -61,7 +61,7 @@ export default class MsgList extends React.Component {
           </em>
           :
           <div>
-            { this.state.list.map((mid, i) => {
+            { this.state.list.slice(0, this.props.limit).map((mid, i) => {
               return <ListItem key={mid} msg={this.props.msgsById[mid]} {...this.handlers} forceRaw={this.props.forceRaw} />
             }) }
           </div>

@@ -1,21 +1,8 @@
 'use babel'
 import React from 'react'
-import { Link } from 'react-router'
 import { verticalFilled } from '../com'
 import Issues from '../com/issues'
 import u from '../lib/util'
-
-class NavLink extends React.Component {
-  render() {
-    var selected = (this.props.to === this.props.currentView)
-    let content = this.props.children
-    if (!content)
-      content = <span><i className={'fa fa-'+this.props.icon} /> {this.props.label} {this.props.count ? ' ('+this.props.count+')' : ''}</span>
-    return <div className={'leftnav-item '+(selected?'selected':'')}>
-      <Link to={this.props.to}>{content}</Link>
-    </div>
-  }
-}
 
 class LeftNav extends React.Component {
   constructor(props) {
@@ -40,21 +27,27 @@ class LeftNav extends React.Component {
     return this.props.names[id] || u.shortString(id||'', 6)
   }
   render() {
-    let renderProfLink = (id, name, icon) => {
-      return <NavLink key={'profile:'+id} to={'/profile/'+encodeURIComponent(id)} currentView={this.props.currentView}>
-        <i className={'fa fa-'+icon} /> {typeof name == 'string' ? name : this.nameOf(id)}
-      </NavLink>
+    // helper component to render nav links
+    const NavLink = ({ to, icon, label, count }) => {
+      var selected = (to === this.props.currentView)
+      return <div className={'leftnav-item '+(selected?'selected':'')}>
+        <a onClick={()=>this.props.onOpenView(to)}><i className={'fa fa-'+icon} /> {label} {count ? ' ('+count+')' : ''}</a>
+      </div>
+    }
+    // helper component to render profile nav links
+    const ProfLink = ({ id, label, icon }) => {
+      return <NavLink to={'Profile:'+encodeURIComponent(id)} icon={icon} label={typeof label == 'string' ? label : this.nameOf(id)} />
     }
 
     return <div id="leftnav" style={{height: this.props.height}}>
       <div className="leftnav-item label">Messages</div>
-      <NavLink to="newsfeed" currentView={this.props.currentView} icon="newspaper-o" label="Feed" />
-      <NavLink to="inbox" currentView={this.props.currentView} icon="inbox" label="Inbox" count={this.state.indexCounts.inboxUnread} />
-      <NavLink to="bookmarks" currentView={this.props.currentView} icon="bookmark-o" label="Saved" count={this.state.indexCounts.bookmarksUnread} />
+      <NavLink to="NewsFeed" icon="newspaper-o" label="Feed" />
+      <NavLink to="Inbox" icon="inbox" label="Inbox" count={this.state.indexCounts.inboxUnread} />
+      <NavLink to="Bookmarks" icon="bookmark-o" label="Saved" count={this.state.indexCounts.bookmarksUnread} />
 
       <div className="leftnav-item label">People</div>
-      {renderProfLink(this.props.userid, 'Your Profile', 'user')}
-      <NavLink to="people" currentView={this.props.currentView} icon="at" label="Contacts" />
+      <ProfLink id={this.props.userid} label="Your Profile" icon="user" />
+      <NavLink to="People" icon="at" label="Contacts" />
       <Issues />
     </div>
   }

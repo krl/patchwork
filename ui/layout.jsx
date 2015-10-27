@@ -5,6 +5,7 @@ import app from './lib/app'
 import * as Views from './views'
 import LeftNav from './views/leftnav'
 import { SetupModal } from './com/modals'
+import { viewOpen } from './actions/views'
 
 class NotFoundView extends React.Component {
   render() {
@@ -42,6 +43,7 @@ class Layout extends React.Component {
         <LeftNav
           currentView={this.props.currentView}
           views={this.props.views}
+          onOpenView={this.props.onOpenView}
           userid={this.state.user.id}
           names={this.state.users.names}
           friends={this.state.user.friends}
@@ -59,7 +61,12 @@ function mapStateToProps (state) {
     views: state.views
   }
 }
-const ConnectedLayout = connect(mapStateToProps)(Layout)
+function mapDispatchToProps (dispatch) {
+  return {
+    onOpenView: (viewId) => dispatch(viewOpen(viewId))
+  }
+}
+const ConnectedLayout = connect(mapStateToProps, mapDispatchToProps)(Layout)
 
 
 export default function (store) {

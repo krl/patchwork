@@ -57,7 +57,7 @@ function msgList(state = defaultMsgListState, action) {
     // fetch succeeded, append to end
     return Object.assign({}, state, {
       isLoading: false,
-      isAtEnd: msgs.length === 0,
+      isAtEnd: action.isAtEnd,
       msgs: state.msgs.concat(msgs.map(m => m.key)),
       botcursor: action.botcursor
     })

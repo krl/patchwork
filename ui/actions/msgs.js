@@ -47,7 +47,7 @@ export function msglistLoadMore (listId, amt) {
           // fetch thread data and decrypt
           u.getPostThread(msg.key, cb)
         }),/*,
-        (this.props.filter) ? pull.filter(this.props.filter) : undefined,
+        TODO search goes here?
         (this.props.searchQuery) ? pull.filter(this.searchQueryFilter.bind(this)) : undefined*/
 
         pull.collect((err, msgs) => {
@@ -78,7 +78,7 @@ export function msglistLoadMore (listId, amt) {
 
     // fetch amount requested
     fetchBottomBy(amt, isAtEnd => {
-      dispatch({ type: MSGLIST_LOAD_MORE_SUCCESS, listId, msgs: newMsgs, botcursor })
+      dispatch({ type: MSGLIST_LOAD_MORE_SUCCESS, listId, msgs: newMsgs, botcursor, isAtEnd })
     })
   }
 }

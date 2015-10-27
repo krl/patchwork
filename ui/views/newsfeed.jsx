@@ -19,24 +19,45 @@ const FILTERS = [
 ]
 
 class NewsFeed extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      listLength: PAGE_SIZE // # the list should be showing right now
+    }
+  }
+
   componentDidMount() {
     this.props.onLoad()
   }
 
+  onSelectFilter(filter) {
+    // reset the list size
+    this.setState({ listLength: PAGE_SIZE })
+    // bubble up
+    this.props.onSelectFilter(filter)
+  }
+
+  onInfiniteLoad() {
+    // increase the list size
+    this.setState({ listLength: this.state.listLength + PAGE_SIZE })
+  }
+
   render() {
+    const list = this.props.list
+    const shouldLoadMore = list && !list.isFetching && (!list.isAtEnd || this.state.listLength < list.msgs.length)
     return <div id="feed">
       <FAB label="Compose" icon="pencil" onClick={this.props.onOpenComposer} />
-      <SimpleInfinite onInfiniteLoad={this.props.onLoadMore} infiniteLoadBeginBottomOffset={this.props.shouldLoadMore ? 100 : 0}>
+      <SimpleInfinite onInfiniteLoad={this.onInfiniteLoad.bind(this)} infiniteLoadBeginBottomOffset={shouldLoadMore ? 100 : 0}>
         <div className="toolbar">
           <a className="btn"><i className="fa fa-search" /></a>
-          <Tabs options={FILTERS} selected={this.props.activeFilter} onSelect={this.props.onSelectFilter} />
+          <Tabs options={FILTERS} selected={this.props.activeFilter} onSelect={this.onSelectFilter.bind(this)} />
         </div>
         <MsgList
           ListItem={Card}
           list={this.props.list}
           msgsById={this.props.msgsById}
           filterFn={this.props.activeFilter.fn}
-          minimumCount={PAGE_SIZE}
+          limit={this.state.listLength}
           onNeedsMore={this.props.onLoadMore}
           isLoading={this.props.isLoading}
           emptyMsg="Your feed is empty" />
@@ -53,8 +74,7 @@ function mapStateToProps (state) {
     activeFilter: settings.activeFilter || FILTERS[0],
     msgsById: state.msgsById,
     list: (msgList) ? msgList.msgs : [],
-    isLoading: (msgList) ? msgList.isLoading : true,
-    shouldLoadMore: msgList && !msgList.isFetching && !msgList.isAtEnd
+    isLoading: (msgList) ? msgList.isLoading : true
   }
 }
 function mapDispatchToProps (dispatch) {
