@@ -62,7 +62,7 @@ export default class MsgList extends React.Component {
           :
           <div>
             { this.state.list.slice(0, this.props.limit).map((mid, i) => {
-              return <ListItem key={mid} msg={this.props.msgsById[mid]} {...this.handlers} forceRaw={this.props.forceRaw} />
+              return <ListItem key={mid} msg={this.props.msgsById[mid]} {...this.handlers} onOpenMsg={this.props.onOpenMsg} forceRaw={this.props.forceRaw} />
             }) }
           </div>
         }

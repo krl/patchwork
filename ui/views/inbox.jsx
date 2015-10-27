@@ -59,6 +59,7 @@ class Inbox extends React.Component {
           filterFn={this.props.activeFilter.fn}
           limit={this.state.listLength}
           onNeedsMore={this.props.onLoadMore}
+          onOpenMsg={this.props.onOpenMsg}
           isLoading={this.props.isLoading}
           emptyMsg="Your inbox is empty" />
       </SimpleInfinite>
@@ -86,7 +87,8 @@ function mapDispatchToProps (dispatch) {
       numInitialLoad: PAGE_SIZE
     })),
     onLoadMore: () => dispatch(msglistLoadMore('Inbox', PAGE_SIZE)),
-    onOpenComposer: () => dispatch(viewOpen('composer')),
+    onOpenMsg: (msgId) => dispatch(viewOpen('Msg:'+msgId)),
+    onOpenComposer: () => dispatch(viewOpen('Composer')),
     onSelectFilter: (filter) => dispatch(viewUpdateSetting('Inbox', 'activeFilter', filter))
   }
 }

@@ -9,14 +9,11 @@ import app from '../lib/app'
 const INLINE_LENGTH_LIMIT = 100
 
 export class Notification extends React.Component {
-  onSelect() {
+  onOpenMsg() {
     // get root msg
-    var subject = this.props.subject || this.props.msg.voteMsg
-    u.getParentPostThread(subject.key, (err, thread) => {
-      if (err)
-        return app.issue('Failed to load thread', err, 'This occurred when a notification link was clicked')
-      this.props.onSelect(thread, true)
-    })
+    let subject = this.props.subject || this.props.msg.voteMsg
+    let threadRootLink = mlib.link(subject.value.content.root)
+    this.props.onOpenMsg(threadRootLink.link || subject.key)
   }
   render() {
     let msg = this.props.msg
@@ -26,8 +23,8 @@ export class Notification extends React.Component {
         let key = mlib.link(c.vote).link
         let subject = this.props.subject || this.props.msg.voteMsg
         let text = (subject && subject.value.content && subject.value.content.text || 'your message')
-        if (c.vote.value > 0) return <span><i className="fa fa-hand-peace-o" /> <UserLink id={msg.value.author} /> dug <a onClick={this.onSelect.bind(this)}><MdInline limit={INLINE_LENGTH_LIMIT} md={text}/></a></span>
-        if (c.vote.value === 0) return <span><i className="fa fa-hand-peace-o" /> <UserLink id={msg.value.author} /> undug <a onClick={this.onSelect.bind(this)}><MdInline limit={INLINE_LENGTH_LIMIT} md={text}/></a></span>
+        if (c.vote.value > 0) return <span><i className="fa fa-hand-peace-o" /> <UserLink id={msg.value.author} /> dug <a onClick={this.onOpenMsg.bind(this)}><MdInline limit={INLINE_LENGTH_LIMIT} md={text}/></a></span>
+        if (c.vote.value === 0) return <span><i className="fa fa-hand-peace-o" /> <UserLink id={msg.value.author} /> undug <a onClick={this.onOpenMsg.bind(this)}><MdInline limit={INLINE_LENGTH_LIMIT} md={text}/></a></span>
         break
       case 'contact':
         let pid = mlib.link(c.contact).link
@@ -88,7 +85,7 @@ export default class Notifications extends React.Component {
       <div><small><i className="fa fa-bell" /> Notifications</small></div>
       { !this.state.msgs.length ? <div><em>No new notifications</em></div> : '' }
       { this.state.msgs.map((msg, i) => {
-        return <div key={i}><Notification msg={msg} onSelect={this.props.onSelect} /></div>
+        return <div key={i}><Notification msg={msg} onOpenMsg={this.props.onOpenMsg} /></div>
       }) }
     </div>
   }

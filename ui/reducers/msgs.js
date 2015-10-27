@@ -8,6 +8,13 @@ export function msgsById (state = {}, action) {
   const { type, msg, msgs } = action
 
   switch (type) {
+  case MsgActions.MSG_LOAD:
+    // replace/add message
+    if (action.err)
+      console.error(action.err) // TODO
+    else
+      return Object.assign({}, state, { [msg.key]: msg })
+
   case MsgActions.MSGLIST_LOAD_MORE_SUCCESS:
     // we have an array of messages, pull them into an { id: msg } object and merge with state
     let newMsgs = {}

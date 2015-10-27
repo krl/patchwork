@@ -1,7 +1,7 @@
 'use babel'
 import React from 'react'
 import { connect } from 'react-redux'
-import { viewOpen, viewUpdateSetting } from '../actions/views'
+import { viewOpen, viewOpenMsg, viewUpdateSetting } from '../actions/views'
 import { msglistCreate, msglistLoadMore, msgListSetFilter } from '../actions/msgs'
 import SimpleInfinite from '../com/simple-infinite'
 import FAB from '../com/fab'
@@ -59,6 +59,7 @@ class NewsFeed extends React.Component {
           filterFn={this.props.activeFilter.fn}
           limit={this.state.listLength}
           onNeedsMore={this.props.onLoadMore}
+          onOpenMsg={this.props.onOpenMsg}
           isLoading={this.props.isLoading}
           emptyMsg="Your feed is empty" />
       </SimpleInfinite>
@@ -86,7 +87,8 @@ function mapDispatchToProps (dispatch) {
       numInitialLoad: PAGE_SIZE
     })),
     onLoadMore: () => dispatch(msglistLoadMore('NewsFeed', PAGE_SIZE)),
-    onOpenComposer: () => dispatch(viewOpen('composer')),
+    onOpenMsg: (msgId) => dispatch(viewOpenMsg(msgId)),
+    onOpenComposer: () => dispatch(viewOpen('Composer')),
     onSelectFilter: (filter) => dispatch(viewUpdateSetting('NewsFeed', 'activeFilter', filter))
   }
 }

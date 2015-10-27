@@ -7,6 +7,7 @@ export const MSGLIST_LOAD_MORE = 'MSGLIST_LOAD_MORE'
 export const MSGLIST_LOAD_MORE_SUCCESS = 'MSGLIST_LOAD_MORE_SUCCESS'
 export const MSGLIST_LOAD_MORE_FAILURE = 'MSGLIST_LOAD_MORE_FAILURE'
 export const MSGLIST_LIVE_UPDATE = 'MSGLIST_LIVE_UPDATE'
+export const MSG_LOAD = 'MSG_LOAD'
 
 export function msglistCreate (listId, opts) {
   let { fetchFn, cursorFn, liveOptsFn, numInitialLoad } = opts
@@ -85,4 +86,23 @@ export function msglistLoadMore (listId, amt) {
 
 export function msglistLiveUpdate (listId, msg) {
   return { type: MSGLIST_LIVE_UPDATE, listId, msg }
+}
+
+
+export function msgLoad (msgId) {
+  return (dispatch, getState) => {
+    let msg = getState().msgsById[msgId]
+
+    // dont fetch if already loaded
+    if (msg)
+      return
+
+    // fetch the thread
+    u.getPostThread(msgId, (err, thread) => {
+      if (err)
+        dispatch({ type: MSG_LOAD, err: err })
+      else
+        dispatch({ type: MSG_LOAD, msg: thread })
+    })
+  }
 }

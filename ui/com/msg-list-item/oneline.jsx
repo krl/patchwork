@@ -8,7 +8,7 @@ import u from '../../lib/util'
 
 export default class Oneline extends React.Component {
   onClick() {
-    this.props.onSelect(this.props.msg)
+    this.props.onOpenMsg(this.props.msg.key)
   }
 
   render() {

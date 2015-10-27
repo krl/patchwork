@@ -48,8 +48,8 @@ export default class Summary extends React.Component {
     this.state = { isOversized: false, subject: null }
   }
 
-  onSelect() {
-    this.props.onSelect(this.props.msg)
+  onOpenMsg() {
+    this.props.onOpenMsg(this.props.msg.key)
   }
 
   componentDidMount() {
@@ -93,7 +93,7 @@ export default class Summary extends React.Component {
     return <div className={'msg-list-item card-post' + (this.state.isOversized?' oversized':'')}>
       <div className="ctrls">
         <UserPic id={msg.value.author} />
-        <div><a onClick={this.onSelect.bind(this)}><i className="fa fa-reply" /> Reply</a></div>
+        <div><a onClick={this.onOpenMsg.bind(this)}><i className="fa fa-reply" /> Reply</a></div>
         <SaveBtn isBookmarked={msg.isBookmarked} onClick={()=>this.props.onToggleBookmark(msg)} />
       </div>
       <div className="content">
@@ -106,7 +106,7 @@ export default class Summary extends React.Component {
         </div>
         <div className="body" ref="body">
           <Content msg={msg} forceRaw={this.props.forceRaw} />
-          { this.state.isOversized ? <div className="read-more" onClick={this.onSelect.bind(this)}><a>Read more</a></div> : ''}
+          { this.state.isOversized ? <div className="read-more" onClick={this.onOpenMsg.bind(this)}><a>Read more</a></div> : ''}
         </div>
         <div className="signallers">
           <DigBtn onClick={()=>this.props.onToggleStar(msg)} isUpvoted={isUpvoted} />
@@ -115,7 +115,7 @@ export default class Summary extends React.Component {
         <div className="signals">
           { upvoters.length ? <div className="upvoters"><i className="fa fa-hand-peace-o"/> by <UserLinks ids={upvoters}/></div> : ''}
           { replies ?
-            <a onClick={this.onSelect.bind(this)}>
+            <a onClick={this.onOpenMsg.bind(this)}>
               {replies === 1 ? '1 reply ' : (replies + ' replies ')}
               { unreadReplies ? <strong>{unreadReplies} new</strong> : '' }
             </a> : '' }
@@ -129,7 +129,7 @@ export default class Summary extends React.Component {
     return <div className={'msg-list-item card-action'}>
       <div className="ctrls"><UserPic id={msg.value.author} /></div>
       <div className="content">
-        <div><Notification msg={msg} subject={this.state.subject} onSelect={this.props.onSelect} /></div>
+        <div><Notification msg={msg} subject={this.state.subject} onOpenMsg={this.props.onOpenMsg} /></div>
         <div><NiceDate ts={msg.value.timestamp} /></div>
       </div>
     </div>

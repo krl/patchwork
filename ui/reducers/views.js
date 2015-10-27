@@ -7,6 +7,10 @@ const DEFAULT_VIEW = 'NewsFeed'
 const defaultViewState = {
   iface: '', // id of the interface
   param: '', // arbitrary string given to the view on open
+  title: '', // used in nav ui
+  subtitle: '', // used in nav ui
+  icon: '', // used in nav ui
+  pinned: false, // is this view always in the nav?
   settings: {} // arbitrary KVs maintained by the view
 }
 function view (state = defaultViewState, action) {
@@ -14,8 +18,12 @@ function view (state = defaultViewState, action) {
   case ViewActions.VIEW_OPEN:
     // view opened - will create if previously DNE, no effect otherwise
     return Object.assign({}, state, {
-      iface: action.iface,
-      param: action.param
+      iface:    action.iface,
+      param:    action.param,
+      title:    action.title || state.title,
+      subtitle: action.subtitle || state.subtitle,
+      icon:     action.icon || state.icon,
+      pinned:   ('pinned' in action) ? action.pinned : state.pinned
     })
 
   case ViewActions.VIEW_UPDATE_SETTING:
@@ -29,7 +37,13 @@ function view (state = defaultViewState, action) {
 
 // Active UI Views
 // - { viewId: view }
-export function views (state = {}, action) {
+const defaultViewsState = {
+  NewsFeed:  Object.assign({}, defaultViewState, { iface: 'NewsFeed',  icon: 'newspaper-o', title: 'Feed',     pinned: true }),
+  Inbox:     Object.assign({}, defaultViewState, { iface: 'Inbox',     icon: 'inbox',       title: 'Inbox',    pinned: true }),
+  Bookmarks: Object.assign({}, defaultViewState, { iface: 'Bookmarks', icon: 'bookmark-o',  title: 'Saved',    pinned: true }),
+  People:    Object.assign({}, defaultViewState, { iface: 'People',    icon: 'at',          title: 'Contacts', pinned: true })
+}
+export function views (state = defaultViewsState, action) {
   switch (action.type) {
   case ViewActions.VIEW_OPEN:
   case ViewActions.VIEW_UPDATE_SETTING:

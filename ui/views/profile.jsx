@@ -67,6 +67,7 @@ class Profile extends React.Component {
           filterFn={filterFn}
           limit={this.state.listLength}
           onNeedsMore={this.props.onLoadMore.bind(null, this.props.pid)}
+          onOpenMsg={this.props.onOpenMsg}
           isLoading={this.props.isLoading}
           emptyMsg="This feed is empty" />
       </SimpleInfinite>
@@ -100,7 +101,8 @@ function mapDispatchToProps (dispatch) {
       numInitialLoad: PAGE_SIZE
     })),
     onLoadMore: (pid) => dispatch(msglistLoadMore('Profile:'+pid, PAGE_SIZE)),
-    onOpenComposer: () => dispatch(viewOpen('composer')),
+    onOpenMsg: (msgId) => dispatch(viewOpen('Msg:'+msgId)),
+    onOpenComposer: () => dispatch(viewOpen('Composer')),
     onSelectFilter: (pid, filter) => dispatch(viewUpdateSetting('Profile:'+pid, 'activeFilter', filter))
   }
 }

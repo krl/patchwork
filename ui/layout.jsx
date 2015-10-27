@@ -50,7 +50,7 @@ class Layout extends React.Component {
           friends={this.state.user.friends}
           following={this.state.user.nonfriendFolloweds}
           followers={this.state.user.nonfriendFollowers} />
-        <div id="mainview"><CurrentViewCom /></div>
+        <div id="mainview"><CurrentViewCom param={currentViewObj && currentViewObj.param} /></div>
       </div>
     </div>
   }
