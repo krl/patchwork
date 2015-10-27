@@ -57,8 +57,9 @@ function msgList(state = defaultMsgListState, action) {
     // fetch succeeded, append to end
     return Object.assign({}, state, {
       isLoading: false,
-      isAtEnd: msgs.length > 0,
-      msgs: state.msgs.concat(msgs.map(m => m.key))
+      isAtEnd: msgs.length === 0,
+      msgs: state.msgs.concat(msgs.map(m => m.key)),
+      botcursor: action.botcursor
     })
 
   case MsgActions.MSGLIST_LOAD_MORE_FAILURE:

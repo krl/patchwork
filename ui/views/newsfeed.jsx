@@ -30,12 +30,10 @@ class NewsFeed extends React.Component {
   }
 
   onLoadMore() {
-    console.log('tryin to load more')
     this.props.dispatch(msglistLoadMore('newsfeed', 25))
   }
 
   render() {
-    console.log('shouldLoadMore', this.props.shouldLoadMore)
     return <div id="feed">
       <SimpleInfinite onInfiniteLoad={this.onLoadMore.bind(this)} infiniteLoadBeginBottomOffset={this.props.shouldLoadMore ? 100 : 0}>
         <MsgList
@@ -51,7 +49,6 @@ class NewsFeed extends React.Component {
 
 function mapStoreToProps (state) {
   const msgList = state.msgLists.newsfeed
-  console.log(!!msgList, msgList && !msgList.isFetching, msgList && !msgList.isAtEnd)
   return {
     settings: state.views.NewsFeed.settings,
     msgsById: state.msgsById,

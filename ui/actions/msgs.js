@@ -24,7 +24,7 @@ export function msglistLoadMore (listId, amt) {
     let list = getState().msgLists[listId]
 
     // dont fetch if already at end, or already fetching
-    if (list && (list.isAtEnd || list.isFetching))
+    if (list && (list.isAtEnd || list.isLoading))
       return
 
     // dispatch start msg
@@ -32,6 +32,7 @@ export function msglistLoadMore (listId, amt) {
 
     let newMsgs = []
     let numFetched = 0
+    let botcursor = list.botcursor
     let cursorFn = list.cursorFn || ((msg) => { if (msg) { return msg.value.timestamp } })
 
     // helper to fetch a batch of messages
@@ -39,7 +40,7 @@ export function msglistLoadMore (listId, amt) {
       amt = amt || 50
       var lastmsg
       pull(
-        list.fetchFn({ reverse: true, limit: amt, lt: (list.botcursor) ? cursorFn(list.botcursor) : undefined }),
+        list.fetchFn({ reverse: true, limit: amt, lt: (botcursor) ? cursorFn(botcursor) : undefined }),
         pull.through(msg => { lastmsg = msg }), // track last message processed
     
         pull.asyncMap((msg, cb) => {
@@ -60,9 +61,9 @@ export function msglistLoadMore (listId, amt) {
           }
 
           // nothing new? stop
-          if (!lastmsg || (list.botcursor && list.botcursor.key == lastmsg.key))
+          if (!lastmsg || (botcursor && botcursor.key == lastmsg.key))
             return cb(true)
-          list.botcursor = lastmsg
+          botcursor = lastmsg
 
           // fetch more if needed
           var remaining = amt - msgs.length
@@ -77,7 +78,7 @@ export function msglistLoadMore (listId, amt) {
 
     // fetch amount requested
     fetchBottomBy(amt, isAtEnd => {
-      dispatch({ type: MSGLIST_LOAD_MORE_SUCCESS, listId, msgs: newMsgs })
+      dispatch({ type: MSGLIST_LOAD_MORE_SUCCESS, listId, msgs: newMsgs, botcursor })
     })
   }
 }
