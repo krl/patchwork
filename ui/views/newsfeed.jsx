@@ -1,45 +1,43 @@
 'use babel'
 import React from 'react'
 import { connect } from 'react-redux'
-import pull from 'pull-stream'
-import mlib from 'ssb-msgs'
-import { msglistCreate, msglistLoadMore } from '../actions/msgs'
+import { viewOpen, viewUpdateSetting } from '../actions/views'
+import { msglistCreate, msglistLoadMore, msgListSetFilter } from '../actions/msgs'
 import SimpleInfinite from '../com/simple-infinite'
+import FAB from '../com/fab'
+import Tabs from '../com/tabs'
 import MsgList from '../com/msg-list'
 import Card from '../com/msg-list-item/card'
 import app from '../lib/app'
 import social from '../lib/social-graph'
 
+const PAGE_SIZE = 25 // how many msgs do we load at once, and want to try to get on the page?
 const FILTERS = [
   { label: 'Friends', fn: msg => msg.value.author === app.user.id || social.follows(app.user.id, msg.value.author) },
-  { label: 'Friends + Network', fn: msg => true }
+  { label: 'Friends + Network', fn: msg => true },
+  { label: 'Every 10', fn: (msg, i) => (i % 10 === 0) }
 ]
 
 class NewsFeed extends React.Component {
-  constructor(props) {
-    super(props)
-  }
-
   componentDidMount() {
-    this.props.dispatch(msglistCreate('newsfeed', {
-      fetchFn: app.ssb.patchwork.createNewsfeedStream,
-      cursorFn: (msg) => [msg.value.timestamp, msg.value.author],
-      liveOptsFn: () => { gt: [Date.now(), null] },
-      numInitialLoad: 25
-    }))
-  }
-
-  onLoadMore() {
-    this.props.dispatch(msglistLoadMore('newsfeed', 25))
+    this.props.onLoad()
   }
 
   render() {
     return <div id="feed">
-      <SimpleInfinite onInfiniteLoad={this.onLoadMore.bind(this)} infiniteLoadBeginBottomOffset={this.props.shouldLoadMore ? 100 : 0}>
+      <FAB label="Compose" icon="pencil" onClick={this.props.onOpenComposer} />
+      <SimpleInfinite onInfiniteLoad={this.props.onLoadMore} infiniteLoadBeginBottomOffset={this.props.shouldLoadMore ? 100 : 0}>
+        <div className="toolbar">
+          <a className="btn"><i className="fa fa-search" /></a>
+          <Tabs options={FILTERS} selected={this.props.activeFilter} onSelect={this.props.onSelectFilter} />
+        </div>
         <MsgList
           ListItem={Card}
           list={this.props.list}
           msgsById={this.props.msgsById}
+          filterFn={this.props.activeFilter.fn}
+          minimumCount={PAGE_SIZE}
+          onNeedsMore={this.props.onLoadMore}
           isLoading={this.props.isLoading}
           emptyMsg="Your feed is empty" />
       </SimpleInfinite>
@@ -47,16 +45,29 @@ class NewsFeed extends React.Component {
   }
 }
 
-function mapStoreToProps (state) {
-  const msgList = state.msgLists.newsfeed
+function mapStateToProps (state) {
+  const msgList = state.msgLists.NewsFeed
+  const settings = state.views.NewsFeed.settings
   return {
-    settings: state.views.NewsFeed.settings,
+    settings: settings,
+    activeFilter: settings.activeFilter || FILTERS[0],
     msgsById: state.msgsById,
     list: (msgList) ? msgList.msgs : [],
     isLoading: (msgList) ? msgList.isLoading : true,
     shouldLoadMore: msgList && !msgList.isFetching && !msgList.isAtEnd
   }
 }
-export default connect(mapStoreToProps)(NewsFeed)
-/*
-*/
+function mapDispatchToProps (dispatch) {
+  return {
+    onLoad: () => dispatch(msglistCreate('NewsFeed', {
+      fetchFn: app.ssb.patchwork.createNewsfeedStream,
+      cursorFn: (msg) => [msg.value.timestamp, msg.value.author],
+      liveOptsFn: () => { gt: [Date.now(), null] },
+      numInitialLoad: PAGE_SIZE
+    })),
+    onLoadMore: () => dispatch(msglistLoadMore('NewsFeed', PAGE_SIZE)),
+    onOpenComposer: () => dispatch(viewOpen('composer')),
+    onSelectFilter: (filter) => dispatch(viewUpdateSetting('NewsFeed', 'activeFilter', filter))
+  }
+}
+export default connect(mapStateToProps, mapDispatchToProps)(NewsFeed)

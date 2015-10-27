@@ -13,6 +13,7 @@ const DEDUPLICATE_LIMIT = 100
 export default class MsgList extends React.Component {
   constructor(props) {
     super(props)
+    this.state = { list: props.list }
 
     // handlers
     this.handlers = {
@@ -31,6 +32,24 @@ export default class MsgList extends React.Component {
     }
   }
 
+  componentDidMount() {
+    this.runFilter(this.props)
+  }
+  componentWillReceiveProps(nextProps) {
+    this.runFilter(nextProps)
+  }
+  runFilter(props) {
+    // reduce the list by the active filter, if there is one
+    if (!props.filterFn || props.list.length === 0)
+      return
+    let list = props.list.filter((mid, i) => props.filterFn(props.msgsById[mid], i))
+    this.setState({ list: list })
+
+    // fire the needs-more CB if that's too few
+    if (props.minimumCount && list.length < props.minimumCount)
+      props.onNeedsMore()
+  }
+
   render() {
     const isEmpty = (!this.props.isLoading && this.props.list.length === 0)
     const ListItem = this.props.ListItem
@@ -42,7 +61,7 @@ export default class MsgList extends React.Component {
           </em>
           :
           <div>
-            { this.props.list.map((mid, i) => {
+            { this.state.list.map((mid, i) => {
               return <ListItem key={mid} msg={this.props.msgsById[mid]} {...this.handlers} forceRaw={this.props.forceRaw} />
             }) }
           </div>

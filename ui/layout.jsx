@@ -53,13 +53,13 @@ class Layout extends React.Component {
   }
 }
 
-function mapStoreToProps (state) {
+function mapStateToProps (state) {
   return {
     currentView: state.currentView,
     views: state.views
   }
 }
-const ConnectedLayout = connect(mapStoreToProps)(Layout)
+const ConnectedLayout = connect(mapStateToProps)(Layout)
 
 
 export default function (store) {
