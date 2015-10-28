@@ -8,6 +8,8 @@ export const MSGLIST_LOAD_MORE_SUCCESS = 'MSGLIST_LOAD_MORE_SUCCESS'
 export const MSGLIST_LOAD_MORE_FAILURE = 'MSGLIST_LOAD_MORE_FAILURE'
 export const MSGLIST_LIVE_UPDATE = 'MSGLIST_LIVE_UPDATE'
 export const MSG_LOAD = 'MSG_LOAD'
+export const MSG_MARK_READ = 'MSG_MARK_READ'
+export const MSG_MARK_UNREAD = 'MSG_MARK_UNREAD'
 
 export function msglistCreate (listId, opts) {
   let { fetchFn, cursorFn, liveOptsFn, numInitialLoad } = opts
@@ -89,20 +91,55 @@ export function msglistLiveUpdate (listId, msg) {
 }
 
 
-export function msgLoad (msgId) {
+export function msgLoad (msgId, opts) {
   return (dispatch, getState) => {
     let msg = getState().msgsById[msgId]
 
     // dont fetch if already loaded
     if (msg)
-      return
+      return next()
 
     // fetch the thread
     u.getPostThread(msgId, (err, thread) => {
       if (err)
         dispatch({ type: MSG_LOAD, err: err })
-      else
+      else {
         dispatch({ type: MSG_LOAD, msg: thread })
+        next()
+      }
+    })
+
+    function next () {
+      if (opts && opts.markRead)
+        dispatch(msgMarkRead(msgId))
+    }
+  }
+}
+
+export function msgMarkRead (msgId) {
+  return (dispatch, getState) => {
+    const msg = getState().msgsById[msgId]
+    if (!msg)
+      return console.error('Failed to mark thread as read: message not in memory') // TODO
+
+    u.markThreadRead(msg, (err) => {
+      if (err)
+        return console.error('Failed to mark thread as read', err) // TODO
+      dispatch({ type: MSG_MARK_READ, msg: msg })
+    })
+  }
+}
+
+export function msgMarkUnread (msgId) {
+  return (dispatch, getState) => {
+    const msg = getState().msgsById[msgId]
+    if (!msg)
+      return console.error('Failed to mark thread as unread: message not in memory') // TODO
+
+    u.markThreadUnread(msg, (err) => {
+      if (err)
+        return console.error('Failed to mark thread as unread', err) // TODO
+      dispatch({ type: MSG_MARK_UNREAD, msg: msg })
     })
   }
 }

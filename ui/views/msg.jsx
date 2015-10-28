@@ -1,7 +1,7 @@
 'use babel'
 import React from 'react'
 import { connect } from 'react-redux'
-import { msgLoad } from '../actions/msgs'
+import { msgLoad, msgMarkUnread } from '../actions/msgs'
 import { viewOpen, viewClose, viewUpdateSetting } from '../actions/views'
 import { VerticalFilledContainer } from '../com/index'
 import FAB from '../com/fab'
@@ -52,7 +52,13 @@ function mapStateToProps (state, props) {
 }
 function mapDispatchToProps (dispatch) {
   return {
-    onLoad: (mid) => dispatch(msgLoad(mid)),
+    onLoad: (mid) => {
+      dispatch(msgLoad(mid, { markRead: true }))
+    },
+    onMarkUnread: (mid) => {
+      dispatch(msgMarkUnread(mid))
+      dispatch(viewClose('Msg:'+mid))
+    },
     onCloseView: (mid) => dispatch(viewClose('Msg:'+mid)),
     onOpenComposer: () => dispatch(viewOpen('composer'))
   }

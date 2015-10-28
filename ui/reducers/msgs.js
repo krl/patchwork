@@ -9,6 +9,8 @@ export function msgsById (state = {}, action) {
 
   switch (type) {
   case MsgActions.MSG_LOAD:
+  case MsgActions.MSG_MARK_READ:
+  case MsgActions.MSG_MARK_UNREAD:
     // replace/add message
     if (action.err)
       console.error(action.err) // TODO
