@@ -2,9 +2,9 @@
 import React from 'react'
 import mlib from 'ssb-msgs'
 import { UserLink, UserLinks, UserPic, NiceDate } from '../index'
-import { Block as Content } from '../msg-content'
+import { Block as Content, Inline as InlineContent } from '../msg-content'
 import { Inline as MdInline } from '../markdown'
-import { countReplies } from '../../lib/msg-relation'
+import { getReplies } from '../../lib/msg-relation'
 import DropdownBtn from '../dropdown'
 import u from '../../lib/util'
 import app from '../../lib/app'
@@ -47,10 +47,22 @@ class DigBtn extends React.Component {
     this.props.onClick()
   }
   render() {
-    let label = this.props.isUpvoted ? 'Dug it' : 'Dig it'
+    const label = this.props.isUpvoted ? 'Dug it' : 'Dig it'
     return <a className={'vote'+(this.props.isUpvoted?' selected':'')} title={label} onClick={this.onClick.bind(this)}>
       <i className="fa fa-hand-peace-o" /> {label}
     </a>
+  }
+}
+
+class Reply extends React.Component {
+  render() {
+    const msg = this.props.msg
+    return <div className="reply">
+      <div className="avatar"><UserPic id={msg.value.author} /></div>
+      <div className="content">
+        <Content msg={msg} />
+      </div>
+    </div>
   }
 }
 
@@ -112,8 +124,8 @@ export default class Card extends React.Component {
   }
 
   renderPost(msg, upvoters, downvoters, isUpvoted) {
-    const replies = countReplies(msg)
-    const unreadReplies = countReplies(msg, m => !m.isRead)
+    const replies = getReplies(msg)
+    const unreadReplies = replies.filter(m => !m.isRead)
     return <div className={'msg-list-item card-post' + (this.state.isOversized?' oversized':'')}>
       <div className="ctrls">
         <UserPic id={msg.value.author} />
@@ -139,11 +151,15 @@ export default class Card extends React.Component {
         <div className="signals">
           { upvoters.length ? <div className="upvoters"><i className="fa fa-hand-peace-o"/> by <UserLinks ids={upvoters}/></div> : ''}
           { downvoters.length ? <div className="downvoters"><i className="fa fa-flag"/> by <UserLinks ids={downvoters}/></div> : ''}
-          { replies ?
+          { replies.length ?
             <a onClick={this.onSelect.bind(this)}>
-              {replies === 1 ? '1 reply ' : (replies + ' replies ')}
-              { unreadReplies ? <strong>{unreadReplies} new</strong> : '' }
+              {replies.length === 1 ? '1 reply ' : (replies.length + ' replies ')}
+              { unreadReplies.length ? <strong>{unreadReplies.length} new</strong> : '' }
             </a> : '' }
+        </div>
+        <div className="replies">
+          { replies.length > 3 ? <div className="more">{replies.length-3} other replies</div> : '' }
+          { replies.slice(-3).map(r => <Reply msg={r} />)}
         </div>
       </div>
     </div>

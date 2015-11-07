@@ -3,10 +3,10 @@ import mlib from 'ssb-msgs'
 
 // :TODO: generalize and move this file into ssb-msgs
 
-export function countReplies (thread, filter) {
+export function getReplies (thread, filter) {
   if (!thread.related)
-    return 0
-  let n = 0
+    return []
+  let replies = []
   let counted = {}
   thread.related.forEach(function (r) {
     if (!isaReplyTo(r, thread)) // only replies
@@ -15,10 +15,14 @@ export function countReplies (thread, filter) {
       return
     if (filter && !filter(r)) // run filter
       return
-    n++
+    replies.push(r)
     counted[r.key] = true
   })
-  return n
+  return replies
+}
+
+export function countReplies (thread, filter) {
+  return getReplies(thread, filter).length
 }
 
 export function isaReplyTo (a, b) {

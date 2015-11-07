@@ -48,9 +48,7 @@ export class MsgView extends React.Component {
   }
 
   renderCollapsed() {
-    let msg = this.props.msg
-    let upvoters = getUpvotes(this.props.msg)
-    let isUpvoted = upvoters.indexOf(app.user.id) !== -1
+    const msg = this.props.msg
     return <div className="msg-view-collapsed" onClick={this.onToggleCollapsed.bind(this)}>
       <div className="avatar"><UserPic id={msg.value.author} /></div>
       <div className="content">

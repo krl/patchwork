@@ -1,8 +1,8 @@
 .msg-list-item.card-post {
-  display: flex;
   max-width: 600px;
   margin: 10px auto;
   padding-right: 130px;
+  display: flex;
 
   &:first-child {
     margin-top: 30px;
@@ -57,7 +57,6 @@
     color: @dark-gray3;
     font-weight: 300;
     font-family: Helvetica;
-    font-size: 90%;
     line-height: 1.4;
     max-height: 500px;
   }
@@ -114,6 +113,37 @@
       padding-top: 70px;
       color: blue;
       cursor: pointer;
+    }
+  }
+
+  .replies {
+    padding: 2px 5px;
+    background: #fafafa;
+
+    .reply {
+      display: flex;
+      max-width: 523px;
+      margin: 3px auto;
+
+      .avatar {
+        flex: 0 0 26px;
+        padding: 2px 6px 0 0px;
+        text-align: right;
+        img {
+          width: 26px;
+          margin: 3px 0 0;
+          border-radius: 3px;
+        }
+      }
+
+      .content {
+        flex: 1;
+        padding: 10px;
+        color: #555;
+        font-weight: 300;
+        font-family: @content-font;
+        line-height: 1.5;
+      }
     }
   }
 }
