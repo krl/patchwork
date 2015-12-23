@@ -1,4 +1,7 @@
 var fs          = require('fs')
+var level       = require('level')
+var sublevel    = require('level-sublevel/bytewise')
+var highlevel   = require('highlevel')
 var pull        = require('pull-stream')
 var multicb     = require('multicb')
 var pl          = require('pull-level')
@@ -20,12 +23,413 @@ exports.permissions = require('./permissions')
 exports.init = function (sbot, opts) {
 
   var api = {}
-  var patchworkdb = sbot.sublevel('patchwork')
+  var db = {}
+  var makeTable = highlevel({ db: sbot.sublevel('patchwork'), pullStreams: true })
+
+  //
+  // table definitions
+  //
+  
+  db.isRead = makeTable({
+    version: 1,
+    name: 'isRead',
+    type: 'stateful',
+    persisted: true,
+    schema: { key: 'string', isRead: 'boolean' },
+    queries: { default: { key: 'key' } }
+  })
+
+  db.isBookmarked = makeTable({
+    version: 1,
+    name: 'isBookmarked',
+    type: 'stateful',
+    persisted: true,
+    schema: { key: 'string', isBookmarked: 'boolean' },
+    queries: { default: { key: 'key' } }
+  })
+
+  db.channels = makeTable({
+    version: 1,
+    name: 'channels',
+    type: 'stateful',
+    persisted: true,
+    schema: { name: 'string', isPinned: 'boolean' },
+    queries: { default: { key: 'name' } }
+  })
+
+  db.threads = makeTable({
+    version: 1,
+    name: 'threads',
+    type: 'computed'
+    schema: {
+      key: 'string', // root key of the thread
+      author: 'string',
+      sequence: 'number',
+      sendTime: 'number', // as declared in the message (not trustworthy)
+      recvTime: 'number', // as received
+      createdTime: 'number', // min(sendTime, recvTime)
+      lastUpdatedTime: 'number', // min(sendTime, recvTime) for most recent reply
+      isEncrypted: 'boolean',
+      isBookmarked: 'boolean',
+      isRead: 'boolean',
+      content: 'object',
+      contentChannel: 'string'
+    },
+    processor: threadProcessor,
+    queries: {
+      default: { key: 'key' },
+      received: { key: 'recvTime' },
+      byAuthor: { groupBy: 'author', key: 'sequence' },
+      newsfeed: {
+        prefilter: function (row) { return !row.isEncrypted },
+        key: {
+          created: ['createdTime', 'key'],
+          updated: ['lastUpdatedTime', 'key']
+        },
+        recomputeOn: ['lastUpdatedTime']
+      },
+      inbox: {
+        prefilter: function (row) { return row.isEncrypted },
+        key: {
+          created: ['createdTime', 'key'],
+          updated: ['lastUpdatedTime', 'key']
+        },
+        filter: { unread: function (row) { return !row.isRead } },
+        recomputeOn: ['lastUpdatedTime']
+      },
+      channels: {
+        groupBy: 'contentChannel',
+        prefilter: function (row) { return !row.isEncrypted },
+        key: {
+          created: ['createdTime', 'key'],
+          updated: ['lastUpdatedTime', 'key']
+        },
+        recomputeOn: ['lastUpdatedTime']
+      },
+      bookmarks: {
+        prefilter: function (row) { return row.isBookmarked },
+        key: {
+          created: ['createdTime', 'key'],
+          updated: ['lastUpdatedTime', 'key']
+        },
+        filter: { unread: function (row) { return !row.isRead } },
+        recomputeOn: ['isBookmarked', 'lastUpdatedTime']
+      }
+    }
+  })
+
+  db.notifications = makeTable({
+    version: 1,
+    name: 'notifications',
+    type: 'computed',
+    processor: notificationProcessor,
+    schema: {
+      type: 'string', // 'vote', 'follow', 'mention'
+      key: 'string', // the key will depend on the type
+      recvTime: 'number',
+      data: 'object' // event-specific data
+    },
+    queries: {
+      default: { key: 'recvTime' },
+      byType: { groupBy: 'type', key: 'recvTime' }
+    }
+  })
+
+  db.profiles = makeTable({
+    version: 1,
+    name: 'profiles',
+    type: 'computed',
+    processor: profileProcessor,
+    schema: {
+      name: 'string',
+      image: 'object',
+      following: 'boolean',
+      blocking: 'boolean'
+    },
+    queries: {
+      default: { key: ['subjectKey', 'author'] },
+      byAuthor: { groupBy: 'author', key: 'subject' },
+      bySubject: {
+        groupBy: 'subjectKey',
+        key: 'author',
+        filter: { self: function (row) { return row.author === row.subjectKey } }
+      }
+    }
+  })
+
+  //
+  // processing pipeline
+  //
+
+  // wire up ssb-log
+  pull(
+    pl.read(sbot.sublevel('log'), { live: true, onSync: onSSBHistorySync }),
+    pull.through(function (e) { e.type = 'ssb-msg' }),
+    highlevel.pullProcessor([db.threads, db.notifications, db.profiles])
+  )
+  function onSSBHistorySync () {
+    // after ssb history has synced, wire up stateful table changelogs
+    pull(db.isRead.createChangeStream({ live: true }), highlevel.pullProcessor([db.threads, db.notifications, db.profiles]))
+    pull(db.isBookmarked.createChangeStream({ live: true }), highlevel.pullProcessor([db.threads, db.notifications, db.profiles]))
+  }
+
+  function threadProcessor (e, cb) {
+    if (e.type == 'ssb-msg') {
+      // try to decrypt
+      var isEncrypted = (typeof e.value.content == 'string' && e.value.content.slice(-4) == '.box')
+      var c = e.value.content = ((isEncrypted) ? sbot.private.unbox(e.value.content) : e.value.content)
+      if (!c)
+        return cb()
+
+      // posts only
+      if (c.type != 'post')
+        return cb()
+
+      // root post?
+      var root = mlib.link(c.root)
+      if (root) {
+        // new thread
+        db.threads.put({
+          key: e.key,
+          author: e.value.author,
+          sequence: e.value.sequence,
+
+          sendTime: e.value.timestamp,
+          recvTime: e.received,
+          createdTime: ts(e),
+          lastUpdatedTime: ts(e),
+
+          isEncrypted: isEncrypted,
+          isBookmarked: false,
+          isRead: false,
+
+          content: c,
+          contentChannel: c.channel
+        }, cb)
+      } else {
+        // thread update
+        db.threads.atomicUpdate(root.link, function (err, thread) {
+          if (thread)
+            return { lastUpdated: ts(e) }
+        }, cb)
+      }
+    }
+    if (e.type == 'change' && e.table == 'isRead' && 'isRead' in e.data) {
+      // isRead update
+      db.threads.atomicUpdate(e.data.key, function (err, thread) {
+        if (thread)
+          return { isRead: e.data.isRead }
+      }, cb)
+    }
+    if (e.type == 'change' && e.table == 'isBookmarked' && 'isBookmarked' in e.data) {
+      // isBookmarked update
+      db.threads.atomicUpdate(e.data.key, function (err, thread) {
+        if (thread)
+          return { isBookmarked: e.data.isBookmarked }
+      }, cb)
+    }
+  }
+
+  function notificationProcessor (e, cb) {
+    /*
+      type: 'string', // 'vote', 'follow', 'mention'
+      key: 'string', // the key will depend on the type
+      recvTime: 'number',
+      data: 'object' // event-specific data
+    */
+    if (e.type == 'ssb-msg') {
+      // try to decrypt
+      var isEncrypted = (typeof e.value.content == 'string' && e.value.content.slice(-4) == '.box')
+      var c = e.value.content = ((isEncrypted) ? sbot.private.unbox(e.value.content) : e.value.content)
+      if (!c)
+        return cb()
+
+      // TODO
+      return cb()
+    }
+  }
+
+  function profileProcessor (e, cb) {
+    if (e.type == 'ssb-msg') {
+      // try to decrypt
+      var isEncrypted = (typeof e.value.content == 'string' && e.value.content.slice(-4) == '.box')
+      var c = e.value.content = ((isEncrypted) ? sbot.private.unbox(e.value.content) : e.value.content)
+      if (!c)
+        return cb()
+
+      var row = {
+        author: e.value.author,
+        subjectKey: null
+      }
+
+      if (c.type == 'about') {
+        // get subjectKey
+        var about = mlib.link(c.about)
+        if (!about)
+          return cb()
+        row.subjectKey = about.link
+        
+        // update
+        if (nonEmptyStr(c.name))
+          row.name = makeNameSafe(c.name)
+        var image = mlib.link(c.image, 'blob')
+        if (image)
+          row.image = image
+        db.profiles.put(row, cb)
+      }
+      else if (c.type == 'contact') {
+        // get subjectKey
+        var contact = mlib.link(c.contact)
+        if (!contact)
+          return cb()
+        row.subjectKey = contact.link
+        
+        // update
+        if (typeof c.following == 'boolean')
+          row.following = c.following
+        if (typeof c.blocking == 'boolean')
+          row.blocking = c.blocking
+        db.profiles.put(row, cb)
+      }
+    }
+  }
+
+  //
+  // api
+  //
+
+  // threads
+  api.threads = function (opts) {
+    if (opts.threads) {
+      // TODO include threads
+    }
+    if (opts.summaries) {
+      // TODO include summaries
+    }
+    return db.threads.createReadStream(opts)
+  }
+  api.countThreads = db.threads.count.bind(db.threads)
+
+  // notifications
+  api.notifications = db.notifications.createReadStream.bind(db.notifications)
+  api.countNotifications = db.notifications.count.bind(db.notifications)
+
+  // profiles
+  api.profiles = db.profiles.createReadStream.bind(db.profiles)
+  api.countProfiles = db.profiles.count.bind(db.profiles)
+  api.getProfile = db.profiles.get.bind(db.profiles)
+
+  // channels
+  api.channels = db.channels.createReadStream.bind(db.channels)
+  api.getChannel = db.channels.get.bind(db.channes)
+  api.setChannelPinned = function (name, v, cb) {
+    db.channels.put({ name: name, isPinned: v }, cb)
+  }
+  api.toggleChannelPinned = function (name, cb) {
+    db.channels.lock(name, function (err, unlock) {
+      if (err) return cb(err)
+
+      db.channels.get(name, function (err, row) {
+        if (err) return unlock(), cb(err)
+          
+        var newRow = { name: name, isPinned: !row.isPinned }
+        db.channels.put(newRow, function (err) {
+          unlock()
+          if (err) cb(err)
+          else     cb(null, newRow)
+        })
+      }
+    })
+  }
+
+  // isread
+  api.getIsRead = db.isRead.get.bind(db.isRead)
+  api.setIsRead = function (key, v, cb) {
+    db.isRead.put({ key: key, isRead: v }, cb)
+  }
+  api.toggleIsRead = function (key, cb) {
+    db.isRead.atomicUpdate(key, function (err, row) {
+      if (row)
+        return { isRead: !row.isRead }
+    }, cb)
+  }
+
+  // isbookmarked
+  api.getIsBookmarked = db.isBookmarked.get.bind(db.isBookmarked)
+  api.setIsBookmarked = function (key, v, cb) {
+    db.isBookmarked.put({ key: key, isBookmarked: v }, cb)
+  }
+  api.toggleIsBookmarked = function (key, cb) {
+    db.isBookmarked.atomicUpdate(key, function (err, row) {
+      if (row)
+        return { isBookmarked: !row.isBookmarked }
+    }, cb)
+  }
+
+  // file helpers
+  api.addFileToBlobs = function (path, cb) {
+    pull(
+      toPull.source(fs.createReadStream(path)),
+      sbot.blobs.add(function (err, hash) {
+        if (err)
+          cb(err)
+        else {
+          var ext = pathlib.extname(path)
+          if (ext == '.png' || ext == '.jpg' || ext == '.jpeg') {
+            var res = getImgDim(path)
+            res.hash = hash
+            cb(null, res)
+          } else
+            cb(null, { hash: hash })
+        }
+      })
+    )
+  }
+  api.saveBlobToFile = function (hash, path, cb) {
+    pull(
+      sbot.blobs.get(hash),
+      toPull.sink(fs.createWriteStream(path), cb)
+    )
+  }
+  function getImgDim (path) {
+    var NativeImage = require('native-image')
+    var ni = NativeImage.createFromPath(path)
+    return ni.getSize()
+  }
+
+
+  // helper to get the most reliable timestamp for a message
+  // - stops somebody from boosting their ranking (accidentally, maliciously) with a future TS
+  // - applies only when ordering by most-recent
+  function ts (msg) {
+    return Math.min(msg.received, msg.value.timestamp)
+  }
+
+  function nonEmptyStr (str) {
+    return (typeof str === 'string' && !!(''+str).trim())
+  }
+
+  // allow A-z0-9._-, dont allow a trailing .
+  var badNameCharsRegex = /[^A-z0-9\._-]/g
+  function makeNameSafe (str) {
+    str = str.replace(badNameCharsRegex, '_')
+    if (str.charAt(str.length - 1) == '.')
+      str = str.slice(0, -1) + '_'
+    return str
+  }
+
+  //
+  // legacy
+  //
+
+  var patchworkdb = sbot.sublevel('patchwork')  
   var db = {
+    // local user data
     isread: patchworkdb.sublevel('isread'),
     bookmarked: patchworkdb.sublevel('bookmarked'),
     channelpinned: patchworkdb.sublevel('channelpinned')
   }
+
   var state = {
     // indexes (lists of {key:, ts:})
     mymsgs: [],
