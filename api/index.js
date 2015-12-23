@@ -25,9 +25,10 @@ exports.init = function (sbot, opts) {
   var api = {}
   var makeTable = highlevel({ db: sbot.sublevel('patchwork'), pullStreams: true })
   var db = require('./tables')(makeTable)
+  var indexCountNotify = Notify()
 
   //
-  // processing pipeline
+  // processing & events pipeline
   //
 
   // wire up ssb-log
@@ -42,12 +43,40 @@ exports.init = function (sbot, opts) {
     pull(db.isBookmarked.createChangeStream({ live: true }), highlevel.pullProcessor([db.threads, db.notifications, db.profiles]))
   }
 
+  // wire up index-counts events
+  db.threads.on('recount', indexCountNotify.emit.bind(indexCountNotify))
+
   //
   // api
   //
 
+  // index counts
+  api.new_indexCounts = function (cb) {
+    var done = multicb({ pluck: 1, spread: true })
+    db.threads.count({ query: 'inbox' }, done())
+    db.threads.count({ query: 'inbox', filter: 'unread' }, done())
+    db.threads.count({ query: 'bookmarks' }, done())
+    db.threads.count({ query: 'bookmarks', filter: 'unread' }, done())
+    db.threads.count({ query: 'channels' }, done())
+    db.threads.count({ query: 'channels', filter: 'unread' }, done())
+    done(function (err, inbox, inboxUnread, bookmarks, bookmarksUnread, channels, channelsUnread) {
+      if (err) return cb(err)
+      cb(null, {
+        inbox: inbox,
+        channels: channels,
+        bookmarks: bookmarks,
+        inboxUnread: inboxUnread,
+        channelsUnread: channelsUnread,
+        bookmarksUnread: bookmarksUnread
+      })
+    })
+  }
+  api.new_indexCountsChanges = function () {
+    return indexCountNotify.listen()
+  }
+
   // threads
-  api.threads = function (opts) {
+  api.new_threads = function (opts) {
     if (opts.threads) {
       // TODO include threads
     }
@@ -56,24 +85,27 @@ exports.init = function (sbot, opts) {
     }
     return db.threads.createReadStream(opts)
   }
-  api.countThreads = db.threads.count.bind(db.threads)
+  api.new_threadsChanges = db.threads.createChangeStream.bind(db.threads)
+  api.new_countThreads = db.threads.count.bind(db.threads)
 
   // notifications
-  api.notifications = db.notifications.createReadStream.bind(db.notifications)
-  api.countNotifications = db.notifications.count.bind(db.notifications)
+  api.new_notifications = db.notifications.createReadStream.bind(db.notifications)
+  api.new_countNotifications = db.notifications.count.bind(db.notifications)
 
   // profiles
-  api.profiles = db.profiles.createReadStream.bind(db.profiles)
-  api.countProfiles = db.profiles.count.bind(db.profiles)
-  api.getProfile = db.profiles.get.bind(db.profiles)
+  api.new_profiles = db.profiles.createReadStream.bind(db.profiles)
+  api.new_profilesChanges = db.profiles.createChangeStream.bind(db.profiles)
+  api.new_countProfiles = db.profiles.count.bind(db.profiles)
+  api.new_getProfile = db.profiles.get.bind(db.profiles)
 
   // channels
-  api.channels = db.channels.createReadStream.bind(db.channels)
-  api.getChannel = db.channels.get.bind(db.channes)
-  api.setChannelPinned = function (name, v, cb) {
+  api.new_channels = db.channels.createReadStream.bind(db.channels)
+  api.new_channelsChanges = db.channels.createChangeStream.bind(db.channels)
+  api.new_getChannel = db.channels.get.bind(db.channes)
+  api.new_setChannelPinned = function (name, v, cb) {
     db.channels.put({ name: name, isPinned: v }, cb)
   }
-  api.toggleChannelPinned = function (name, cb) {
+  api.new_toggleChannelPinned = function (name, cb) {
     db.channels.lock(name, function (err, unlock) {
       if (err) return cb(err)
 
@@ -91,11 +123,11 @@ exports.init = function (sbot, opts) {
   }
 
   // isread
-  api.getIsRead = db.isRead.get.bind(db.isRead)
-  api.setIsRead = function (key, v, cb) {
+  api.new_getIsRead = db.isRead.get.bind(db.isRead)
+  api.new_setIsRead = function (key, v, cb) {
     db.isRead.put({ key: key, isRead: v }, cb)
   }
-  api.toggleIsRead = function (key, cb) {
+  api.new_toggleIsRead = function (key, cb) {
     db.isRead.atomicUpdate(key, function (err, row) {
       if (row)
         return { isRead: !row.isRead }
@@ -103,47 +135,17 @@ exports.init = function (sbot, opts) {
   }
 
   // isbookmarked
-  api.getIsBookmarked = db.isBookmarked.get.bind(db.isBookmarked)
-  api.setIsBookmarked = function (key, v, cb) {
+  api.new_getIsBookmarked = db.isBookmarked.get.bind(db.isBookmarked)
+  api.new_setIsBookmarked = function (key, v, cb) {
     db.isBookmarked.put({ key: key, isBookmarked: v }, cb)
   }
-  api.toggleIsBookmarked = function (key, cb) {
+  api.new_toggleIsBookmarked = function (key, cb) {
     db.isBookmarked.atomicUpdate(key, function (err, row) {
       if (row)
         return { isBookmarked: !row.isBookmarked }
     }, cb)
   }
 
-  // file helpers
-  api.addFileToBlobs = function (path, cb) {
-    pull(
-      toPull.source(fs.createReadStream(path)),
-      sbot.blobs.add(function (err, hash) {
-        if (err)
-          cb(err)
-        else {
-          var ext = pathlib.extname(path)
-          if (ext == '.png' || ext == '.jpg' || ext == '.jpeg') {
-            var res = getImgDim(path)
-            res.hash = hash
-            cb(null, res)
-          } else
-            cb(null, { hash: hash })
-        }
-      })
-    )
-  }
-  api.saveBlobToFile = function (hash, path, cb) {
-    pull(
-      sbot.blobs.get(hash),
-      toPull.sink(fs.createWriteStream(path), cb)
-    )
-  }
-  function getImgDim (path) {
-    var NativeImage = require('native-image')
-    var ni = NativeImage.createFromPath(path)
-    return ni.getSize()
-  }
 
   //
   // legacy
