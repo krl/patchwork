@@ -3,6 +3,26 @@ var multicb = require('multicb')
 var EventEmitter = require('events').EventEmitter
 var threadlib = require('patchwork-threads')
 
+// helper to get the most reliable timestamp for a message
+// - stops somebody from boosting their ranking (accidentally, maliciously) with a future TS
+// - applies only when ordering by most-recent
+module.exports.ts = function (msg) {
+  return Math.min(msg.received, msg.value.timestamp)
+}
+
+module.exports.nonEmptyStr = function (str) {
+  return (typeof str === 'string' && !!(''+str).trim())
+}
+
+// allow A-z0-9._-, dont allow a trailing .
+var badNameCharsRegex = /[^A-z0-9\._-]/g
+module.exports.makeNameSafe = function (str) {
+  str = str.replace(badNameCharsRegex, '_')
+  if (str.charAt(str.length - 1) == '.')
+    str = str.slice(0, -1) + '_'
+  return str
+}
+
 module.exports.index = function (name) {
   var index = new EventEmitter()
   index.name = name
