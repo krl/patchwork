@@ -1,28 +1,18 @@
 #newsfeed {
   display: flex;
 
-  .newsfeed-leftnav {
-    flex: 0 0 175px;
-    
-    .newsfeed-leftnav-heading {
-      margin: 15px 0 5px 10px;
-      font-weight: bold;
-      color: gray;
-      font-size: 12px;
-      text-transform: uppercase;
-    }
+  .newsfeed-topnav {
+    display: flex;
+    padding: 0 5px;
 
-    .newsfeed-leftnav-link {
-      margin: 5px 0 5px 10px;
+    .newsfeed-topnav-link {
+      margin: 4px 10px 5px;
       a {
-        color: #555;
+        color: gray;
+        font-weight: 300;
         &.selected {
           color: #006EFF;
         }
-      }
-      i { 
-        width: 20px;
-        text-align: center;
       }
     }
   }

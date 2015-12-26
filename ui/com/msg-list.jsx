@@ -366,7 +366,7 @@ export default class MsgList extends React.Component {
           <div className="flex">
             { LeftNav ? <LeftNav {...this.props.leftNavProps} /> : '' }
             <div className="flex-fill">
-              { Hero ? <Hero/> : '' }
+              { Hero ? <Hero {...this.props.heroProps} /> : '' }
               { nQueued ?
                 <a className="new-msg-queue" onClick={this.reload.bind(this)}>{nQueued} new update{u.plural(nQueued)}</a>
                 : '' }
