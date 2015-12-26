@@ -34,7 +34,7 @@ export default class Inbox extends React.Component {
       </div>
     }
 
-    return <div className="bookmarks">
+    return <div className="inbox">
       <MsgList
         ref="list"
         ListItem={Summary}

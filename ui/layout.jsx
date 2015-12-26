@@ -6,6 +6,7 @@ import app from './lib/app'
 import Inbox from './com/msg-list/inbox'
 import Notifications from './com/msg-list/notifications'
 import Bookmarks from './com/msg-list/bookmarks'
+import ChannelList from './com/channel-list'
 import ModalFlow from './com/modals/flow'
 import ProfileSetup from './com/forms/profile-setup'
 import FollowNearby from './com/forms/follow-nearby'
@@ -16,6 +17,7 @@ import FindBar from './com/findbar'
 const SETUP_LABELS = [<i className="fa fa-user"/>, <i className="fa fa-wifi"/>, <i className="fa fa-cloud"/>]
 const SETUP_FORMS = [ProfileSetup, FollowNearby, PubInvite]
 const RIGHT_NAVS = {
+  channels: ChannelList,
   inbox: Inbox,
   notifications: Notifications,
   bookmarks: Bookmarks
@@ -132,6 +134,7 @@ export default class Layout extends React.Component {
             <Issues />
           </div>
           <div className="divider" />
+          <NavToggle to="channels" icon="hashtag" />
           <NavToggle to="inbox" icon="inbox" count={this.state.indexCounts.inboxUnread} />
           <NavToggle to="bookmarks" icon="bookmark" count={this.state.indexCounts.bookmarksUnread} />
           <NavToggle to="notifications" icon="bell" count={this.state.indexCounts.notificationsUnread} />

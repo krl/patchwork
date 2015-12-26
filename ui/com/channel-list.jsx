@@ -2,9 +2,8 @@
 import pull from 'pull-stream'
 import React from 'react'
 import classNames from 'classnames'
+import { verticalFilled } from './index'
 import app from '../lib/app'
-
-export const ALL_CHANNELS = Symbol('all')
 
 function cls (selected, hasNew) {
   return classNames({ 'channel-list-item': true, flex: true, selected: selected, unread: hasNew })
@@ -37,7 +36,11 @@ class ChannelListItem extends React.Component {
 export class ChannelList extends React.Component {
   constructor(props) {
     super(props)
-    this.state = { searchText: '', searchQuery: false }
+    this.state = { searchText: '', searchQuery: false, channels: app.channels||[] }
+    app.on('update:channels', (this.onUpdateChannels = () => this.setState({ channels: app.channels })))
+  }
+  componentWillUnmount() {
+    app.removeListener('update:channels', this.onUpdateChannels)
   }
 
   onSearchChange(e) {
@@ -45,12 +48,16 @@ export class ChannelList extends React.Component {
     this.setState({ searchText: v, searchQuery: (v) ? new RegExp(v, 'i') : false })
   }
 
+  onSelect(channel) {
+    app.history.pushState(null, '/newsfeed/channel/' + encodeURIComponent(channel.name))
+  }
+
   onSearchKeyDown(e) {
     if (e.keyCode == 13) {
       e.preventDefault()
       e.stopPropagation()
       if (this.state.searchText.trim())
-        this.props.onSelect({ name: this.state.searchText })
+        this.onSelect({ name: this.state.searchText })
       this.onClearSearch()
     }
   }
@@ -60,7 +67,7 @@ export class ChannelList extends React.Component {
   }
 
   onClickOpen() {
-    this.props.onSelect({ name: this.state.searchText })
+    this.onSelect({ name: this.state.searchText })
     this.onClearSearch()
   }
 
@@ -69,7 +76,7 @@ export class ChannelList extends React.Component {
     app.ssb.patchwork.pinChannel(this.state.searchText, err => {
       if (err)
         return app.issue('Failed to create channel', err)
-      this.props.onSelect({ name: this.state.searchText })
+      this.onSelect({ name: this.state.searchText })
       this.onClearSearch()
     })
   }
@@ -84,12 +91,12 @@ export class ChannelList extends React.Component {
     const isPinned = b => channel => (!!channel.pinned == b)
 
     // filtered channels
-    const pinnedChannels   = this.props.channels.filter(isPinned(true)).filter(isPartialMatch)
-    const unpinnedChannels = this.props.channels.filter(isPinned(false)).filter(isPartialMatch)
+    const pinnedChannels   = this.state.channels.filter(isPinned(true)).filter(isPartialMatch)
+    const unpinnedChannels = this.state.channels.filter(isPinned(false)).filter(isPartialMatch)
 
     // render
-    const hasExactMatch = this.props.channels.filter(isExactMatch).length > 0
-    const renderChannel = channel => <ChannelListItem key={channel.name} channel={channel} selected={channel.name === selected} onSelect={this.props.onSelect} />
+    const hasExactMatch = this.state.channels.filter(isExactMatch).length > 0
+    const renderChannel = channel => <ChannelListItem key={channel.name} channel={channel} selected={channel.name === selected} onSelect={this.onSelect} />
     return <div className="channel-list" style={{height: this.props.height, overflow: 'auto'}}>
       <div className="channel-list-ctrls">
         <div className="search">
@@ -118,3 +125,5 @@ export class ChannelList extends React.Component {
     </div>
   }
 }
+const ChannelListVertical = verticalFilled(ChannelList)
+export default ChannelListVertical
