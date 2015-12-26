@@ -3,6 +3,7 @@ import React from 'react'
 import { Link } from 'react-router'
 import ssbref from 'ssb-ref'
 import app from './lib/app'
+import Inbox from './com/msg-list/inbox'
 import Notifications from './com/msg-list/notifications'
 import Bookmarks from './com/msg-list/bookmarks'
 import ModalFlow from './com/modals/flow'
@@ -15,6 +16,7 @@ import FindBar from './com/findbar'
 const SETUP_LABELS = [<i className="fa fa-user"/>, <i className="fa fa-wifi"/>, <i className="fa fa-cloud"/>]
 const SETUP_FORMS = [ProfileSetup, FollowNearby, PubInvite]
 const RIGHT_NAVS = {
+  inbox: Inbox,
   notifications: Notifications,
   bookmarks: Bookmarks
 }
@@ -125,12 +127,12 @@ export default class Layout extends React.Component {
           <a className="ctrl back" onClick={this.onClickBack}><i className="fa fa-angle-left" /></a>
           <div className="nav">
             <NavLink to="/" selected={location === '/' || location.indexOf('/newsfeed/') === 0} icon="newspaper-o" label="Feed" />
-            <NavLink to="/inbox" icon="inbox" label="Inbox" count={this.state.indexCounts.inboxUnread} />
             <NavLink to="/profile" icon="users" label="Contacts" />
             <NavLink to="/sync" icon={isWifiMode?'wifi':'globe'} label='Network' />
             <Issues />
           </div>
           <div className="divider" />
+          <NavToggle to="inbox" icon="inbox" count={this.state.indexCounts.inboxUnread} />
           <NavToggle to="bookmarks" icon="bookmark" count={this.state.indexCounts.bookmarksUnread} />
           <NavToggle to="notifications" icon="bell" count={this.state.indexCounts.notificationsUnread} />
         </div>
